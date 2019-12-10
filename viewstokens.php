@@ -168,3 +168,66 @@ function viewstokens_civicrm_navigationMenu(&$menu) {
   ));
   _viewstokens_civix_navigationMenu($menu);
 } // */
+
+
+function viewstokens_civicrm_tokens(&$tokens) {
+  // watchdog('tokens','<pre>'.print_r($tokens,TRUE).'</pre>');
+  $token_name = 'views';
+  $views_tokens = array();
+  if (function_exists('views_get_enabled_views')) {
+    foreach(views_get_enabled_views() as $name => $view) {
+      foreach($view->display as $display_name => $display) {
+        $views_tokens[$token_name.'.'.$name.'__'.$display_name] = $view->human_name. ', ' .$display->display_title;
+      }
+    }
+    $tokens[$token_name] = $views_tokens;
+  }
+  $tokens['email_address_custom']  = array(
+    'email_address_custom.all' => 'All email addresses.'
+  );
+}
+
+function viewstokens_civicrm_tokenValues(&$values, $cids, $job_id = null, $tokens = array(), $context = null) {
+  if (!empty($tokens['views'])) {
+    foreach($tokens['views'] as $key) {
+      list($view_name,$display_name) = explode('__',$key,2);
+      $output = views_embed_view($view_name, $display_name);
+      // $xml = simplexml_load_string($output);
+      $matched = preg_match_all('/ href="([^#].+?)"/', $output, $matches);
+      $trackable_urls = array();
+      // convert links to trackable links
+      if (!empty($job_id) && !empty($output) && $matched) {
+        // job details to get mailing_id 
+        $job = civicrm_api3('MailingJob', 'getsingle', array('id' => $job_id));
+        // $result = $xml->xpath("//@href");
+        $list = array();
+        // while(list( , $url) = each($result)) {
+        foreach($matches[1] as $url) {
+          $list[$url] = 1;
+        }
+        $trackable_urls = array_keys($list);
+      }
+      else {
+        //CRM_Core_Error::debug_var('Views Token values', $tokens['views']);
+      }
+      foreach ($cids as $cid) {
+        if (count($trackable_urls)) {
+          // get event_queue_id
+          $queue = civicrm_api3('MailingEventQueue', 'getsingle', array('job_id' => $job_id, 'contact_id' => $cid));
+          $replace = array();
+          $search = array();
+          foreach($trackable_urls as $url) {
+            $search[] = '"'.$url.'"';
+            $replace[] = '"'.CRM_Mailing_BAO_TrackableURL::getTrackerURL($url, $job['mailing_id'], $queue['id']).'"';
+          }
+          $values[$cid]['views.'.$key] = str_replace($search,$replace,$output);
+        }
+        else {
+          $values[$cid]['views.'.$key] = $output; 
+        }
+      }
+    } 
+    // watchdog('values','<pre>'.print_r($values,TRUE).'</pre>');
+  }
+}
+

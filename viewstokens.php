@@ -182,9 +182,10 @@ function viewstokens_civicrm_tokens(&$tokens) {
     }
     $tokens[$token_name] = $views_tokens;
   }
-  $tokens['email_address_custom']  = array(
-    'email_address_custom.all' => 'All email addresses.'
-  );
+  $tokens['anchors']  = array();
+  for ($i = 1; $i < 40; $i++) {
+    $tokens['anchors']['anchors.'.$i] = 'Anchor #'.$i.' in the html.';
+  }
 }
 
 function viewstokens_civicrm_tokenValues(&$values, $cids, $job_id = null, $tokens = array(), $context = null) {
@@ -227,7 +228,13 @@ function viewstokens_civicrm_tokenValues(&$values, $cids, $job_id = null, $token
         }
       }
     } 
-    // watchdog('values','<pre>'.print_r($values,TRUE).'</pre>');
+  }
+  if (!empty($tokens['anchors'])) {
+    foreach($tokens['anchors'] as $key) {
+      foreach ($cids as $cid) {
+        $values[$cid]['anchors.'.$key] = '#'.$key;
+      }
+    }
   }
 }
 

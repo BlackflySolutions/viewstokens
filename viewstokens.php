@@ -1,12 +1,14 @@
 <?php
 
 require_once 'viewstokens.civix.php';
+// phpcs:disable
 use CRM_Viewstokens_ExtensionUtil as E;
+// phpcs:enable
 
 /**
  * Implements hook_civicrm_config().
  *
- * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/ 
+ * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_config/
  */
 function viewstokens_civicrm_config(&$config) {
   _viewstokens_civix_civicrm_config($config);
@@ -135,7 +137,7 @@ function viewstokens_civicrm_entityTypes(&$entityTypes) {
 }
 
 /**
- * Implements hook_civicrm_thems().
+ * Implements hook_civicrm_themes().
  */
 function viewstokens_civicrm_themes(&$themes) {
   _viewstokens_civix_civicrm_themes($themes);
@@ -147,94 +149,136 @@ function viewstokens_civicrm_themes(&$themes) {
  * Implements hook_civicrm_preProcess().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_preProcess
- *
-function viewstokens_civicrm_preProcess($formName, &$form) {
-
-} // */
+ */
+//function viewstokens_civicrm_preProcess($formName, &$form) {
+//
+//}
 
 /**
  * Implements hook_civicrm_navigationMenu().
  *
  * @link https://docs.civicrm.org/dev/en/latest/hooks/hook_civicrm_navigationMenu
- *
-function viewstokens_civicrm_navigationMenu(&$menu) {
-  _viewstokens_civix_insert_navigation_menu($menu, 'Mailings', array(
-    'label' => E::ts('New subliminal message'),
-    'name' => 'mailing_subliminal_message',
-    'url' => 'civicrm/mailing/subliminal',
-    'permission' => 'access CiviMail',
-    'operator' => 'OR',
-    'separator' => 0,
-  ));
-  _viewstokens_civix_navigationMenu($menu);
-} // */
-
+ */
+//function viewstokens_civicrm_navigationMenu(&$menu) {
+//  _viewstokens_civix_insert_navigation_menu($menu, 'Mailings', array(
+//    'label' => E::ts('New subliminal message'),
+//    'name' => 'mailing_subliminal_message',
+//    'url' => 'civicrm/mailing/subliminal',
+//    'permission' => 'access CiviMail',
+//    'operator' => 'OR',
+//    'separator' => 0,
+//  ));
+//  _viewstokens_civix_navigationMenu($menu);
+//}
+//
 
 function viewstokens_civicrm_tokens(&$tokens) {
   // watchdog('tokens','<pre>'.print_r($tokens,TRUE).'</pre>');
   $token_name = 'views';
-  $views_tokens = array();
-  if (function_exists('views_get_enabled_views')) {
-    foreach(views_get_enabled_views() as $name => $view) {
-      foreach($view->display as $display_name => $display) {
-        $views_tokens[$token_name.'.'.$name.'__'.$display_name] = $view->human_name. ', ' .$display->display_title;
-      }
+  $views_tokens = [];
+  $views_list = [];
+  if(method_exists('\Drupal\views\Views','getEnabledViews')) {
+    $views_list = \Drupal\views\Views::getEnabledViews();
+    // CRM_Core_Error::debug('views_list',$views_list);
+  }
+  foreach($views_list as $name => $view) {
+    foreach($view->get('display') as $display_name => $display) {
+      $views_tokens[$token_name.'.'.$name.'__'.$display_name] = $view->get('label') . ', ' . $display['display_title'];
     }
-    $tokens[$token_name] = $views_tokens;
   }
-  $tokens['anchors']  = array();
-  for ($i = 1; $i < 40; $i++) {
-    $tokens['anchors']['anchors.'.$i] = 'Anchor #'.$i.' in the html.';
-  }
+  $tokens[$token_name] = $views_tokens;
 }
 
 function viewstokens_civicrm_tokenValues(&$values, $cids, $job_id = null, $tokens = array(), $context = null) {
   if (!empty($tokens['views'])) {
-    foreach($tokens['views'] as $key) {
-      list($view_name,$display_name) = explode('__',$key,2);
-      $output = views_embed_view($view_name, $display_name);
-      // $xml = simplexml_load_string($output);
-      $matched = preg_match_all('/ href="([^#].+?)"/', $output, $matches);
-      $trackable_urls = array();
-      // convert links to trackable links
-      if (!empty($job_id) && !empty($output) && $matched) {
-        // job details to get mailing_id 
-        $job = civicrm_api3('MailingJob', 'getsingle', array('id' => $job_id));
-        // $result = $xml->xpath("//@href");
-        $list = array();
-        // while(list( , $url) = each($result)) {
-        foreach($matches[1] as $url) {
-          $list[$url] = 1;
-        }
-        $trackable_urls = array_keys($list);
-      }
-      else {
-        //CRM_Core_Error::debug_var('Views Token values', $tokens['views']);
-      }
-      foreach ($cids as $cid) {
-        if (count($trackable_urls)) {
-          // get event_queue_id
-          $queue = civicrm_api3('MailingEventQueue', 'getsingle', array('job_id' => $job_id, 'contact_id' => $cid));
-          $replace = array();
-          $search = array();
-          foreach($trackable_urls as $url) {
-            $search[] = '"'.$url.'"';
-            $replace[] = '"'.CRM_Mailing_BAO_TrackableURL::getTrackerURL($url, $job['mailing_id'], $queue['id']).'"';
-          }
-          $values[$cid]['views.'.$key] = str_replace($search,$replace,$output);
+    // Civi::log()->error('<pre>'.print_r($tokens['views'], TRUE).'</pre>');
+    if (class_exists('\Drupal') && \Drupal::hasContainer()) {
+      \Drupal::moduleHandler()->loadAll();
+      \Drupal::configFactory()->getEditable('system.theme')->set('default', 'vwm_base')->save();
+      foreach($tokens['views'] as $key) {
+        list($view_name,$display) = explode('__', $key, 2);
+	/* 
+	 * this section commented out - I'd like to allow the inclusion
+	 * of a parameter to pass to the view, but I can't
+	$argument = NULL;
+        if (strpos($display,'__')) {
+          list($display_name, $argument) = explode('__', $display, 2);
+          $view_renderable = views_embed_view($view_name, $display_name, $argument);
         }
         else {
-          $values[$cid]['views.'.$key] = $output; 
+          $view_renderable = views_embed_view($view_name, $display);
+	} 
+	 */
+        $view_renderable = views_embed_view($view_name, $display);
+	// CRM_Core_Error::debug('view',$view_name, 1, 1);
+	// TODO: render using my view templates - using theme suggestions?
+        $output = \Drupal::service('renderer')->renderPlain($view_renderable);
+        $output = trim($output);
+        // strip out div, yuck!
+        $removals = ['<div class="views-element-container contextual-region form-group">','<div class="views-element-container form-group">'];
+        foreach($removals as $removal) {
+          if (substr($output, 0, strlen($removal)) === $removal && substr($output, -6) === '</div>') {
+            $output = substr($output, strlen($removal));
+            $output = substr($output, 0, -6);
+          }
+	}
+	/* failed attempts to use reg ex to accomlish the removals */
+        //  $output = preg_replace('|<div class=".*?">(.*)</div>|', '$1', $output);
+        // $output = preg_replace('/\<[\/]{0,1}div[^\>]*\>/i', '', $output);
+        // $output = render($view_renderable);
+        // $xml = simplexml_load_string($output);
+	// now convert src links to absolute links
+	// kinda ad-hoc, something about the context in which the theming is taking place I believe
+        $base_url = rtrim(CIVICRM_UF_BASEURL,"/");
+        $output = str_replace('=":/usr/local/bin/','="'.$base_url.'/', $output);
+        $output = str_replace(' src="/',' src="'.$base_url.'/', $output);
+        $output = str_replace(' href="/',' href="'.$base_url.'/', $output);
+        $matched = preg_match_all('/ href="([^#].+?)"/', $output, $matches);
+        // CRM_Core_Error::debug('matched',$matched, 1, 1);
+        $trackable_urls = array();
+        // convert links to trackable links
+        if (!empty($job_id) && !empty($output) && $matched) {
+          // job details to get mailing_id 
+          $job = civicrm_api3('MailingJob', 'getsingle', array('id' => $job_id));
+          // $result = $xml->xpath("//@href");
+          $list = array();
+          // while(list( , $url) = each($result)) {
+          foreach($matches[1] as $url) {
+            $list[$url] = 1;
+          }
+          $trackable_urls = array_keys($list);
         }
-      }
-    } 
-  }
-  if (!empty($tokens['anchors'])) {
-    foreach($tokens['anchors'] as $key) {
-      foreach ($cids as $cid) {
-        $values[$cid]['anchors.'.$key] = '#'.$key;
-      }
+        else {
+          // watchdog('view values', "$view_name  $display_name $job_id ".$output);
+        }
+        // watchdog('view values', "$view_name  $display_name ".$output);
+        foreach ($cids as $cid) {
+          if (count($trackable_urls)) {
+            // get event_queue_id
+            $queue = civicrm_api3('MailingEventQueue', 'getsingle', array('job_id' => $job_id, 'contact_id' => $cid));
+            $replace = array();
+            $search = array();
+            foreach($trackable_urls as $url) {
+              $search[] = '"'.$url.'"';
+              $replace[] = '"'.CRM_Mailing_BAO_TrackableURL::getTrackerURL($url, $job['mailing_id'], $queue['id']).'"';
+            }
+            $values[$cid]['views.'.$key] = str_replace($search,$replace,$output);
+          }
+          else {
+            $values[$cid]['views.'.$key] = $output; 
+          }
+        }
+      } 
+      // watchdog('values','<pre>'.print_r($values,TRUE).'</pre>');
     }
   }
 }
 
+function viewstokens_civicrm_mosaicoBaseTemplates(&$templates) {
+  $templates['viewstokens'] = [
+    'name' => 'viewstokens',
+    'title' => 'Views Tokens Base',
+    'path' => E::url('viewstokens/template-viewstokens.html'),
+    'thumbnail' => E::url('viewstokens/edres/_full.png'),
+  ];
+} 

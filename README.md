@@ -1,19 +1,18 @@
-# ca.blackflysolutions.viewstokens
+# viewstokens
 
-![Screenshot](/images/screenshot.png)
-
-(*FIXME: In one or two paragraphs, describe what the extension does and why one would download it. *)
+This extension allows CiviCRM to make use of Drupal html content defined via the views module.
 
 The extension is licensed under [AGPL-3.0](LICENSE.txt).
 
 ## Requirements
 
-* PHP v7.0+
-* CiviCRM (*FIXME: Version number*)
+* PHP v7.2+
+* CiviCRM 5.35+
+* Drupal 8+
 
 ## Installation (Web UI)
 
-This extension has not yet been published for installation via the web UI.
+Learn more about installing CiviCRM extensions in the [CiviCRM Sysadmin Guide](https://docs.civicrm.org/sysadmin/en/latest/customize/extensions/).
 
 ## Installation (CLI, Zip)
 
@@ -22,7 +21,7 @@ install it with the command-line tool [cv](https://github.com/civicrm/cv).
 
 ```bash
 cd <extension-dir>
-cv dl ca.blackflysolutions.viewstokens@https://github.com/FIXME/ca.blackflysolutions.viewstokens/archive/master.zip
+cv dl viewstokens@https://github.com/blackflysolutions/viewstokens/archive/master.zip
 ```
 
 ## Installation (CLI, Git)
@@ -31,14 +30,36 @@ Sysadmins and developers may clone the [Git](https://en.wikipedia.org/wiki/Git) 
 install it with the command-line tool [cv](https://github.com/civicrm/cv).
 
 ```bash
-git clone https://github.com/FIXME/ca.blackflysolutions.viewstokens.git
+git clone https://github.com/blackflysolutions/viewstokens.git
 cv en viewstokens
 ```
 
-## Usage
+## Getting Started
 
-(* FIXME: Where would a new user navigate to get started? What changes would they see? *)
+All Drupal views will be included in the token list. You can make use of an existing view, or (usually)
+create a view specifically to be included as a token. The token format is 
+
+{views.view_name__display_name}
+
+The token will show up with the view name followed by the display label. 
 
 ## Known Issues
 
-(* FIXME *)
+There are a few challenges which make this extension not useable yet.
+
+1. Themeing
+
+The Drupal theme layer participates in the generating of views html.
+
+For the most part, we don't want that - we want to be specific about which views templates get used.
+
+Especially for mosaico content, for which we'd like to replicate the responsive email html.
+
+Working on that now.
+
+2. Mosaico templates
+
+To generate a list of content, we need a 'placeholder' kind of element in mosaico so it doesn't wrap it up in redundant html.
+
+I've got the beginning of that in this extension, but it needs some work.
+

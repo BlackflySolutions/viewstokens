@@ -1,5 +1,5 @@
-Package: ca.blackflysolutions.viewstokens
-Copyright (C) 2019, FIXME <FIXME>
+Package: viewstokens
+Copyright (C) 2021, FIXME <FIXME>
 Licensed under the GNU Affero Public License 3.0 (below).
 
 -------------------------------------------------------------------------------

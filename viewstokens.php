@@ -195,7 +195,7 @@ function viewstokens_civicrm_tokenValues(&$values, $cids, $job_id = null, $token
     if (class_exists('\Drupal') && \Drupal::hasContainer()) {
       \Drupal::moduleHandler()->loadAll();
       \Drupal::configFactory()->getEditable('system.theme')->set('default', 'vwm_base')->save();
-      foreach($tokens['views'] as $key) {
+      foreach(array_keys($tokens['views']) as $key) {
         list($view_name,$display) = explode('__', $key, 2);
 	/* 
 	 * this section commented out - I'd like to allow the inclusion
